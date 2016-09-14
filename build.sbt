@@ -1,6 +1,6 @@
 organization := "org.zalando"
 
-name := "etcdwatcher"
+name := "play-etcd-watcher"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
