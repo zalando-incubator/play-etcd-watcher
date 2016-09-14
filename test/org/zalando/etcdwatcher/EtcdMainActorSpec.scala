@@ -18,8 +18,7 @@ class EtcdMainActorSpec extends Specification with Mockito {
     val watcherActorRef = watcherActorProbe.ref
 
     val configListener = mock[ConfigListener]
-    val timeoutSettings = mock[TimeoutSettings]
-    timeoutSettings.TimeoutErrorRetryTimeout returns 0.seconds
+    val timeoutSettings = spy(new TimeoutSettings)
     timeoutSettings.UnexpectedErrorRetryTimeout returns 0.seconds
 
     val mainActorRef = TestActorRef(
@@ -31,7 +30,7 @@ class EtcdMainActorSpec extends Specification with Mockito {
   val value: String = "ON"
 
   "Main actor" should {
-    "should update state of dynamicConfSettings" in {
+    "update state of a configListener" in {
       val ts = new TestSetup()
 
       ts.mainActorRef.tell(UpdateKeys(Map(key -> value)), ts.watcherActorRef)
@@ -39,23 +38,7 @@ class EtcdMainActorSpec extends Specification with Mockito {
       ok
     }
 
-    //    "should not set value if provided key does not exist" in {
-    //      val ts = new TestSetup()
-    //
-    //      ts.mainActorRef.tell(UpdateKeys(Map("invalid-key" -> "ON")), ts.watcherActorRef)
-    //      there was no(ts.dynamicConfSettings).setBooleanKey(any[DynamicKeyBoolean], anyBoolean)
-    //      ok
-    //    }
-    //
-    //    "should not set value if value incorrect" in {
-    //      val ts = new TestSetup()
-    //
-    //      ts.mainActorRef.tell(UpdateKeys(Map("key-test" -> "incorrect-value")), ts.watcherActorRef)
-    //      there was no(ts.dynamicConfSettings).setBooleanKey(any[DynamicKeyBoolean], anyBoolean)
-    //      ok
-    //    }
-    //
-    "should schedule child again if timeout expired" in {
+    "schedule child again if server times out" in {
       val ts = new TestSetup()
 
       ts.watcherActorProbe.expectMsg(RetrieveKeys) // this message occurs on main actor startup
@@ -65,13 +48,22 @@ class EtcdMainActorSpec extends Specification with Mockito {
       ok
     }
 
-    "should schedule child again if unexpected error happened" in {
+    "schedule child again if unexpected error happened" in {
       val ts = new TestSetup()
 
       ts.watcherActorProbe.expectMsg(RetrieveKeys) // this message occurs on main actor startup
       val exception = new Exception("Something went wrong")
       ts.mainActorRef.tell(HandleFailure(exception), ts.watcherActorRef)
       ts.watcherActorProbe.expectMsg(RetrieveKeys)
+      ok
+    }
+
+    "ignore if the actor message is of unknown type" in {
+      val ts = new TestSetup()
+
+      ts.watcherActorProbe.expectMsg(RetrieveKeys) // this message occurs on main actor startup
+      ts.mainActorRef.tell("Some unrecognized format of actor message", ts.watcherActorRef)
+      ts.watcherActorProbe.expectNoMsg(1.second)
       ok
     }
   }

@@ -1,13 +1,16 @@
 package org.zalando.etcdwatcher
 
 import akka.actor.ActorSystem
-import akka.testkit.{ TestActorRef, TestProbe }
+import akka.testkit.{TestActorRef, TestProbe}
 import mockws.MockWS
 import org.specs2.mock.Mockito
 import org.specs2.mutable._
 import play.api.Configuration
+import play.api.libs.ws.WSClient
 import play.api.mvc.Action
 import play.api.mvc.Results._
+
+import scala.concurrent.duration._
 
 class EtcdWatcherActorSpec extends Specification with Mockito {
 
@@ -23,7 +26,7 @@ class EtcdWatcherActorSpec extends Specification with Mockito {
   val key2 = "feature2.enabled"
 
   "Watcher actor" should {
-    "should watch and tell main actor if the key was updated " in {
+    "watch and tell main actor if the key was updated" in {
       val mainProbe: TestProbe = TestProbe.apply()
 
       val value = "ON"
@@ -39,7 +42,22 @@ class EtcdWatcherActorSpec extends Specification with Mockito {
       ok
     }
 
-    "should ask main actor to handle failure" in {
+    "ask main actor to handle failure if the directory is not found" in {
+      val mainProbe: TestProbe = TestProbe.apply()
+
+      val url = s"$EtcdUrl/v2/keys/$EtcdDir/?wait=true&recursive=true"
+      val ws = MockWS {
+        case ("GET", `url`) =>
+          Action { NotFound(s"""{"errorCode":100,"message":"Key not found","cause":"/$EtcdDir","index":19}""") }
+      }
+
+      val watcherRef = TestActorRef(new EtcdWatcherActor(ws, configMock))
+      watcherRef.tell(WatchKeys, mainProbe.ref)
+      mainProbe.expectMsgType[HandleFailure]
+      ok
+    }
+
+    "ask main actor to handle failure" in {
       val mainProbe: TestProbe = TestProbe.apply()
 
       val url = s"$EtcdUrl/v2/keys/$EtcdDir/?wait=true&recursive=true"
@@ -54,7 +72,21 @@ class EtcdWatcherActorSpec extends Specification with Mockito {
       ok
     }
 
-    "should tell main actor to update values" in {
+    "handle failure if unexpected problem occurs" in {
+      val mainProbe: TestProbe = TestProbe.apply()
+
+      val url = s"$EtcdUrl/v2/keys/$EtcdDir/?wait=true&recursive=true"
+      val ws = MockWS {
+        case ("GET", `url`) => Action { _ => throw new RuntimeException }
+      }
+
+      val watcherRef = TestActorRef(new EtcdWatcherActor(ws, configMock))
+      watcherRef.tell(WatchKeys, mainProbe.ref)
+      mainProbe.expectMsgType[HandleFailure]
+      ok
+    }
+
+    "tell main actor to update values" in {
       val mainProbe: TestProbe = TestProbe.apply()
 
       val url = s"$EtcdUrl/v2/keys/$EtcdDir/?recursive=true"
@@ -80,6 +112,17 @@ class EtcdWatcherActorSpec extends Specification with Mockito {
           key2 -> "OFF"
         )
       ))
+      ok
+    }
+
+    "ignore if the actor message is of unknown type" in {
+      val mainProbe: TestProbe = TestProbe.apply()
+
+      val url = s"$EtcdUrl/v2/keys/$EtcdDir/?wait=true&recursive=true"
+      val ws = mock[WSClient]
+      val watcherRef = TestActorRef(new EtcdWatcherActor(ws, configMock))
+      watcherRef.tell("Some unrecognized format of actor message", mainProbe.ref)
+      mainProbe.expectNoMsg(1.second)
       ok
     }
   }

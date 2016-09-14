@@ -2,14 +2,15 @@ package org.zalando.etcdwatcher
 
 import javax.inject.Inject
 
-import akka.actor.{ Actor, ActorLogging, ActorRef, _ }
+import akka.actor.{Actor, ActorLogging, ActorRef}
 import play.api.Configuration
+import play.api.http.Status
 import play.api.libs.json._
-import play.api.libs.ws.{ WSClient, WSResponse }
+import play.api.libs.ws.{WSClient, WSResponse}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 object EtcdWatcherActor {
   final val name = "etcd-watcher"
@@ -60,19 +61,22 @@ class EtcdWatcherActor @Inject() (ws: WSClient, config: Configuration) extends A
   }
 
   private def onCompleteAction(tryResponse: Try[WSResponse], senderActor: ActorRef, nested: Boolean): Unit = {
-    val message = tryResponse match {
-      case Success(response) =>
-        Try(buildKeyMap(response.json, nested)) match {
-          case Success(Some(keys)) => UpdateKeys(keys)
-          case Success(None) => UpdateKeys(Map.empty)
-          case Failure(exc) => HandleFailure(exc)
-        }
+    val message = tryResponse.flatMap { response =>
+      response.status match {
+        case Status.OK =>
+          Try(buildKeyMap(response.json, nested))
+        case _ =>
+          Failure(new RuntimeException(s"Returned status ${response.statusText} with body ${response.body}"))
+      }
+    } match {
+      case Success(Some(keys)) => UpdateKeys(keys)
       case Failure(exc) => HandleFailure(exc)
+      case _ => HandleFailure(new IllegalStateException("Unknown error occurred"))
     }
+
     senderActor ! message
   }
 
-  // TODO nested?
   private def buildKeyMap(json: JsValue, nested: Boolean): Option[Map[String, String]] = {
 
     val result: Option[Seq[Key]] = if (nested) {
