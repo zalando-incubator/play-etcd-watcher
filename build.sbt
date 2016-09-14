@@ -2,8 +2,6 @@ organization := "org.zalando"
 
 name := "play-etcd-watcher"
 
-lazy val root = (project in file(".")).enablePlugins(PlayScala)
-
 scalaVersion := "2.11.8"
 
 libraryDependencies ++= Seq(
@@ -14,3 +12,5 @@ libraryDependencies ++= Seq(
 )
 
 maintainer := "team-payana@zalando.de"
+
+lazy val `play-etcd-watcher` = (project in file(".")).enablePlugins(PlayScala)
