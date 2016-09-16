@@ -31,11 +31,8 @@ class EtcdMainActor @Inject() (
 
   override def receive = {
     case UpdateKeys(keys) =>
-      keys.foreach {
-        case (rawKey: String, rawValue: String) =>
-          log.info(s"Received updated key [$rawKey] with value [$rawValue]")
-          configListener.keyUpdated(rawKey, rawValue)
-      }
+      log.debug(s"Received updated keys: keys")
+      configListener.keysUpdated(keys)
       watcherActor ! WatchKeys
 
     case HandleFailure(exception) =>
