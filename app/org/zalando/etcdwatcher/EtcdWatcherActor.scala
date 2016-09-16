@@ -33,10 +33,17 @@ class EtcdWatcherActor @Inject() (ws: WSClient, config: Configuration) extends A
           // keys come in the format "directory/key"
           // and we need to remove the leading directory path
           (js \ "key").as[String].drop(directory.length + 2),
-          (js \ "value").as[String]
+          (js \ "value").asOpt[String]
         )
       )
     }
+  }
+
+  private val SingleNodeParser: (JsValue) => Option[Seq[Key]] = json => {
+    (json \ "node").asOpt[Key].map(Seq(_))
+  }
+  private val NestedNodeParser: (JsValue) => Option[Seq[Key]] = json => {
+    (json \ "node" \ "nodes").asOpt[Seq[Key]]
   }
 
   override def receive = {
@@ -47,7 +54,7 @@ class EtcdWatcherActor @Inject() (ws: WSClient, config: Configuration) extends A
         .withHeaders("Accept" -> "application/json")
         .withRequestTimeout(90.seconds)
         .get()
-        .onComplete(onCompleteAction(_, senderActor, nested = false))
+        .onComplete(onCompleteAction(_, senderActor, SingleNodeParser))
 
     case RetrieveKeys =>
       log.info("Retrieving keys from etcd")
@@ -55,35 +62,29 @@ class EtcdWatcherActor @Inject() (ws: WSClient, config: Configuration) extends A
       ws.url(s"$serverUrl/v2/keys/$directory/?recursive=true")
         .withHeaders("Accept" -> "application/json")
         .get()
-        .onComplete(onCompleteAction(_, senderActor, nested = true))
+        .onComplete(onCompleteAction(_, senderActor, NestedNodeParser))
 
     case _ => log.warning("Unknown message received")
   }
 
-  private def onCompleteAction(tryResponse: Try[WSResponse], senderActor: ActorRef, nested: Boolean): Unit = {
+  private def onCompleteAction(tryResponse: Try[WSResponse], senderActor: ActorRef,
+    parse: JsValue => Option[Seq[Key]]): Unit = {
+
+    def flattenInput(input: Seq[Key]): Map[String, Option[String]] = input.map(_.asTuple).toMap
+
     val message = tryResponse.flatMap { response =>
       response.status match {
         case Status.OK =>
-          Try(buildKeyMap(response.json, nested))
+          val result = parse(response.json).map(flattenInput)
+          Try(result)
         case _ =>
           Failure(new RuntimeException(s"Returned status ${response.statusText} with body ${response.body}"))
       }
     } match {
-      case Success(Some(keys)) => UpdateKeys(keys)
+      case Success(keysOpt) => UpdateKeys(keysOpt.getOrElse(Map.empty))
       case Failure(exc) => HandleFailure(exc)
-      case _ => HandleFailure(new IllegalStateException("Unknown error occurred"))
     }
 
     senderActor ! message
-  }
-
-  private def buildKeyMap(json: JsValue, nested: Boolean): Option[Map[String, String]] = {
-
-    val result: Option[Seq[Key]] = if (nested) {
-      (json \ "node" \ "nodes").asOpt[Seq[Key]]
-    } else {
-      (json \ "node").asOpt[Key].map(Seq(_))
-    }
-    result.map(_.map(_.asTuple).toMap)
   }
 }

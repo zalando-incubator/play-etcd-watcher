@@ -1,7 +1,7 @@
 package org.zalando.etcdwatcher
 
 import akka.actor.ActorSystem
-import akka.testkit.{TestActorRef, TestProbe}
+import akka.testkit.{ TestActorRef, TestProbe }
 import mockws.MockWS
 import org.specs2.mock.Mockito
 import org.specs2.mutable._
@@ -38,7 +38,7 @@ class EtcdWatcherActorSpec extends Specification with Mockito {
 
       val watcherRef = TestActorRef(new EtcdWatcherActor(ws, configMock))
       watcherRef.tell(WatchKeys, mainProbe.ref)
-      mainProbe.expectMsg(UpdateKeys(Map(key1 -> value)))
+      mainProbe.expectMsg(UpdateKeys(Map(key1 -> Some(value))))
       ok
     }
 
@@ -108,8 +108,8 @@ class EtcdWatcherActorSpec extends Specification with Mockito {
       watcherRef.tell(RetrieveKeys, mainProbe.ref)
       mainProbe.expectMsg(UpdateKeys(
         Map(
-          key1 -> "ON",
-          key2 -> "OFF"
+          key1 -> Some("ON"),
+          key2 -> Some("OFF")
         )
       ))
       ok
@@ -123,6 +123,46 @@ class EtcdWatcherActorSpec extends Specification with Mockito {
       val watcherRef = TestActorRef(new EtcdWatcherActor(ws, configMock))
       watcherRef.tell("Some unrecognized format of actor message", mainProbe.ref)
       mainProbe.expectNoMsg(1.second)
+      ok
+    }
+
+    "update when directory is empty" in {
+      val mainProbe: TestProbe = TestProbe.apply()
+
+      val url = s"$EtcdUrl/v2/keys/$EtcdDir/?recursive=true"
+      val ws = MockWS {
+        case ("GET", `url`) =>
+          Action {
+            Ok(
+              s"""{"action":"get","node":{"key":"/$EtcdDir","dir":true,"modifiedIndex":22,"createdIndex":22}}"""
+            )
+          }
+      }
+      val watcherRef = TestActorRef(new EtcdWatcherActor(ws, configMock))
+      watcherRef.tell(RetrieveKeys, mainProbe.ref)
+      mainProbe.expectMsg(UpdateKeys(Map.empty))
+      ok
+    }
+
+    "notify if key is deleted" in {
+      val mainProbe: TestProbe = TestProbe.apply()
+
+      val value = "ON"
+
+      val url = s"$EtcdUrl/v2/keys/$EtcdDir/?wait=true&recursive=true"
+      val ws = MockWS {
+        case ("GET", `url`) =>
+          Action {
+            Ok(
+              s"""{"action":"delete",
+                 |"node":{"key":"/$EtcdDir/$key1","modifiedIndex":25,"createdIndex":24},
+                 |"prevNode":{"key":"/$EtcdDir/$key1","value":"$value","modifiedIndex":24,"createdIndex":24}}""".stripMargin
+            )
+          }
+      }
+      val watcherRef = TestActorRef(new EtcdWatcherActor(ws, configMock))
+      watcherRef.tell(WatchKeys, mainProbe.ref)
+      mainProbe.expectMsg(UpdateKeys(Map(key1 -> None)))
       ok
     }
   }

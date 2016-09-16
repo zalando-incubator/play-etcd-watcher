@@ -33,8 +33,8 @@ class EtcdMainActorSpec extends Specification with Mockito {
     "update state of a configListener" in {
       val ts = new TestSetup()
 
-      ts.mainActorRef.tell(UpdateKeys(Map(key -> value)), ts.watcherActorRef)
-      there was one(ts.configListener).keyUpdated(key, value)
+      ts.mainActorRef.tell(UpdateKeys(Map(key -> Some(value))), ts.watcherActorRef)
+      there was one(ts.configListener).keysUpdated(Map(key -> Some(value)))
       ok
     }
 
