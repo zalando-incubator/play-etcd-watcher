@@ -10,7 +10,7 @@ import play.api.libs.ws.{ WSClient, WSResponse }
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 object EtcdWatcherActor {
   final val name = "etcd-watcher"
