@@ -165,5 +165,25 @@ class EtcdWatcherActorSpec extends Specification with Mockito {
       mainProbe.expectMsg(UpdateKeys(Map(key1 -> None)))
       ok
     }
+
+    "return empty result if directory not found" in {
+      val mainProbe: TestProbe = TestProbe.apply()
+
+      val value = "ON"
+
+      val url = s"$EtcdUrl/v2/keys/$EtcdDir/?wait=true&recursive=true"
+      val ws = MockWS {
+        case ("GET", `url`) =>
+          Action {
+            NotFound(
+              s"""{"errorCode":100,"message":"Key not found","cause":"/key","index":178}"""
+            )
+          }
+      }
+      val watcherRef = TestActorRef(new EtcdWatcherActor(ws, configMock))
+      watcherRef.tell(WatchKeys, mainProbe.ref)
+      mainProbe.expectMsg(UpdateKeys(Map()))
+      ok
+    }
   }
 }
