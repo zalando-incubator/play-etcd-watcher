@@ -2,15 +2,15 @@ package org.zalando.etcdwatcher
 
 import javax.inject.Inject
 
-import akka.actor.{Actor, ActorLogging, ActorRef}
+import akka.actor.{ Actor, ActorLogging, ActorRef }
 import play.api.Configuration
 import play.api.http.Status
 import play.api.libs.json._
-import play.api.libs.ws.{WSClient, WSResponse}
+import play.api.libs.ws.{ WSClient, WSResponse }
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 object EtcdWatcherActor {
   final val name = "etcd-watcher"
@@ -76,7 +76,10 @@ class EtcdWatcherActor @Inject() (ws: WSClient, config: Configuration) extends A
       response.status match {
         case Status.OK =>
           val result = parse(response.json).map(flattenInput)
-          Try(result)
+          Success(result)
+        case Status.NOT_FOUND =>
+          log.warning(s"Directory $directory not found. Returning empty result")
+          Success(Some(Map[String, Option[String]]()))
         case _ =>
           Failure(new RuntimeException(s"Returned status ${response.statusText} with body ${response.body}"))
       }
