@@ -46,13 +46,10 @@ trait ConfigListener {
 The method will be called on startup and on each key change. The
 ```Option``` value of ```None``` denotes the deletion of the key.
 
-## 
-### Versioning
+## Versioning
 The version number follows the Play version but does not necessarily
 correspond to its minor version. In short, if the first release of the
 library was made for Play ```2.5.4```, the version would be ```2.5.0```.
-
-## Contact
 
 ## License
 
