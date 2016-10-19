@@ -43,6 +43,15 @@ trait ConfigListener {
   def keysUpdated(keyValues: Map[String, Option[String]]): Unit
 }
 ```
+and bind it to the implementation in your Module, e.g.
+```
+class AppModule extends AbstractModule with ScalaModule {
+  override def configure(): Unit = {
+    ...
+    bind[ConfigListener].to[MyConfigListener]
+  }
+}
+```
 The method will be called on startup and on each key change. The
 ```Option``` value of ```None``` denotes the deletion of the key.
 
