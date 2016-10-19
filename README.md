@@ -1,8 +1,17 @@
 # Etcd Watcher for Play
 
-Instantaneous etcd directory listener. The module listens for changes in
-the specified etcd directory and notifies the client application through
-the listener trait.
+## What is play-etcd-watcher?
+play-etcd-watcher is a library to listen for changes in
+[etcd](https://github.com/coreos/etcd) via its REST interface and notify the client
+application through its listeners.
+
+## Target users
+You develop a Scala/Play service and at some point you need to change configuration
+parameters, e.g. feature toggle. Would you redeploy your application with a new
+parameter? Or maybe you change the source code? If this sounds familiar but you
+want to avoid such hassles, then you probably need some kind of configuration service,
+e.g. key-value store. If you use etcd, then ```play-etcd-watcher``` will help to listen
+for key changes in your application.
 
 ## Key features
 The updates are received by the client application instantaneous due to
@@ -12,21 +21,21 @@ connection is re-established after a period of time (defaults to 90
 seconds).
 
 ## Getting started
-Add play-etcd-watcher dependency to you ```build.sbt```:
+Add play-etcd-watcher dependency to your ```build.sbt```:
 
-```
+```scala
 libraryDependencies += Seq(
   "org.zalando" %% "play-etcd-watcher" % "2.5.0"
 )
 ```
 
 Add the module to ```conf/application.conf```:
-```
+```scala
 play.modules.enabled += "org.zalando.etcdwatcher.EtcdWatcherModule"
 ```
 
 and specify the following config parameters:
-```
+```scala
 etcd {
   url = http://my-etcd.url
   directory = /my/etcd/directory
@@ -38,13 +47,14 @@ denotes the directory being watched. The directory will be scanned
 recursively.
 
 Next, implement the listener trait:
-```
+
+```scala
 trait ConfigListener {
   def keysUpdated(keyValues: Map[String, Option[String]]): Unit
 }
 ```
 and bind it to the implementation in your Module, e.g.
-```
+```scala
 class AppModule extends AbstractModule with ScalaModule {
   override def configure(): Unit = {
     ...
