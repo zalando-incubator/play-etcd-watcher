@@ -1,3 +1,7 @@
+[![Build Status](https://travis-ci.org/zalando-incubator/play-etcd-watcher.svg?branch=master)](https://travis-ci.org/zalando-incubator/play-etcd-watcher)
+[![Coverage Status](https://coveralls.io/repos/github/zalando-incubator/play-etcd-watcher/badge.svg?branch=master)](https://coveralls.io/github/play-etcd-watcher/play-etcd-watcher?branch=master)
+[![MIT licensed](https://img.shields.io/badge/license-MIT-green.svg)](https://raw.githubusercontent.com/hyperium/hyper/master/LICENSE)
+
 # Etcd Watcher for Play
 
 Instantaneous etcd directory listener. The module listens for changes in
