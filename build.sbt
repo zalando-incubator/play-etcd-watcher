@@ -8,7 +8,7 @@ libraryDependencies ++= Seq(
   ws,
   specs2 % Test,
   "de.leanovate.play-mockws" %% "play-mockws" % "2.5.0" % Test,
-  "com.typesafe.akka" %% "akka-testkit" % "2.4.10" % Test
+  "com.typesafe.akka" %% "akka-testkit" % "2.4.12" % Test
 )
 
 maintainer := "team-payana@zalando.de"
