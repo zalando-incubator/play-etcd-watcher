@@ -42,7 +42,7 @@ class EtcdMainActor @Inject() (
           timeoutSettings.TimeoutErrorRetryTimeout
         case err =>
           log.error(err, s"Unexpected error while requesting key [${err.getMessage}]")
-          timeoutSettings.TimeoutErrorRetryTimeout
+          timeoutSettings.UnexpectedErrorRetryTimeout
       }
       context.system.scheduler.scheduleOnce(retryTimeout, watcherActor, RetrieveKeys)
 

@@ -19,7 +19,7 @@ class EtcdMainActorSpec extends Specification with Mockito {
 
     val configListener = mock[ConfigListener]
     val timeoutSettings = spy(new TimeoutSettings)
-    timeoutSettings.UnexpectedErrorRetryTimeout returns 0.seconds
+    timeoutSettings.UnexpectedErrorRetryTimeout returns 2.seconds
 
     val mainActorRef = TestActorRef(
       new EtcdMainActor(configListener, watcherActorRef, timeoutSettings)
@@ -54,6 +54,7 @@ class EtcdMainActorSpec extends Specification with Mockito {
       ts.watcherActorProbe.expectMsg(RetrieveKeys) // this message occurs on main actor startup
       val exception = new Exception("Something went wrong")
       ts.mainActorRef.tell(HandleFailure(exception), ts.watcherActorRef)
+      ts.watcherActorProbe.expectNoMsg(1.second)
       ts.watcherActorProbe.expectMsg(RetrieveKeys)
       ok
     }
