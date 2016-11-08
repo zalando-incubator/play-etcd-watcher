@@ -1,10 +1,10 @@
 package org.zalando.etcdwatcher
 
 sealed trait EtcdNode {
-  def flatten(acc: List[EtcdValueNode] = List()): List[EtcdValueNode] = {
+  def flatten(): List[EtcdValueNode] = {
     this match {
-      case s: EtcdValueNode => s :: acc
-      case EtcdDirNode(key, nodes) => acc ::: nodes.flatMap(_.flatten() ::: acc)
+      case s: EtcdValueNode => List(s)
+      case EtcdDirNode(key, nodes) => nodes.flatMap(_.flatten())
     }
   }
 }
