@@ -35,7 +35,7 @@ class EtcdWatcherActor @Inject() (ws: WSClient, config: Configuration) extends A
       val key = (json \ "key").as[String].drop(directory.length + 2)
       val node = if (isDir) {
         val nodes = (json \ "nodes").asOpt[Seq[EtcdNode]]
-        EtcdDirNode(key, nodes.toList.flatten)
+        EtcdDirNode(key, nodes.toSeq.flatten)
       } else {
         val value = (json \ "value").asOpt[String]
         EtcdValueNode(key, value)
@@ -70,7 +70,7 @@ class EtcdWatcherActor @Inject() (ws: WSClient, config: Configuration) extends A
     val message = tryResponse.flatMap { response =>
       response.status match {
         case Status.OK =>
-          val allValueNodes: Option[List[EtcdValueNode]] = (response.json \ "node").asOpt[EtcdNode].map(_.flatten())
+          val allValueNodes: Option[Seq[EtcdValueNode]] = (response.json \ "node").asOpt[EtcdNode].map(_.flatten())
           val result = allValueNodes.map(_.map(_.asTuple).toMap)
           Success(result)
         case Status.NOT_FOUND =>
