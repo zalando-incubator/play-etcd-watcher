@@ -26,24 +26,22 @@ class EtcdWatcherActor @Inject() (ws: WSClient, config: Configuration) extends A
     throw new RuntimeException("Etcd url not set")
   }
 
-  private implicit val keyReads = new Reads[Key] {
-    override def reads(js: JsValue): JsResult[Key] = {
-      JsSuccess(
-        Key(
-          // keys come in the format "directory/key"
-          // and we need to remove the leading directory path
-          (js \ "key").as[String].drop(directory.length + 2),
-          (js \ "value").asOpt[String]
-        )
-      )
-    }
-  }
+  private implicit val jsonReads: Reads[EtcdNode] = new Reads[EtcdNode] {
+    override def reads(json: JsValue): JsResult[EtcdNode] = {
+      val isDir = (json \ "dir").asOpt[Boolean].getOrElse(false)
 
-  private val SingleNodeParser: (JsValue) => Option[Seq[Key]] = json => {
-    (json \ "node").asOpt[Key].map(Seq(_))
-  }
-  private val NestedNodeParser: (JsValue) => Option[Seq[Key]] = json => {
-    (json \ "node" \ "nodes").asOpt[Seq[Key]]
+      // keys come in the format "directory/key"
+      // and we need to remove the leading directory path
+      val key = (json \ "key").as[String].drop(directory.length + 2)
+      val node = if (isDir) {
+        val nodes = (json \ "nodes").asOpt[Seq[EtcdNode]]
+        EtcdDirNode(key, nodes.toSeq.flatten)
+      } else {
+        val value = (json \ "value").asOpt[String]
+        EtcdValueNode(key, value)
+      }
+      JsSuccess(node)
+    }
   }
 
   override def receive = {
@@ -54,7 +52,7 @@ class EtcdWatcherActor @Inject() (ws: WSClient, config: Configuration) extends A
         .withHeaders("Accept" -> "application/json")
         .withRequestTimeout(90.seconds)
         .get()
-        .onComplete(onCompleteAction(_, senderActor, SingleNodeParser))
+        .onComplete(onCompleteAction(_, senderActor))
 
     case RetrieveKeys =>
       log.info("Retrieving keys from etcd")
@@ -62,20 +60,18 @@ class EtcdWatcherActor @Inject() (ws: WSClient, config: Configuration) extends A
       ws.url(s"$serverUrl/v2/keys/$directory/?recursive=true")
         .withHeaders("Accept" -> "application/json")
         .get()
-        .onComplete(onCompleteAction(_, senderActor, NestedNodeParser))
+        .onComplete(onCompleteAction(_, senderActor))
 
     case _ => log.warning("Unknown message received")
   }
 
-  private def onCompleteAction(tryResponse: Try[WSResponse], senderActor: ActorRef,
-    parse: JsValue => Option[Seq[Key]]): Unit = {
-
-    def flattenInput(input: Seq[Key]): Map[String, Option[String]] = input.map(_.asTuple).toMap
+  private def onCompleteAction(tryResponse: Try[WSResponse], senderActor: ActorRef): Unit = {
 
     val message = tryResponse.flatMap { response =>
       response.status match {
         case Status.OK =>
-          val result = parse(response.json).map(flattenInput)
+          val allValueNodes: Option[Seq[EtcdValueNode]] = (response.json \ "node").asOpt[EtcdNode].map(_.flatten())
+          val result = allValueNodes.map(_.map(_.asTuple).toMap)
           Success(result)
         case Status.NOT_FOUND =>
           log.warning(s"Directory $directory not found. Returning empty result")

@@ -30,7 +30,7 @@ Add play-etcd-watcher dependency to your ```build.sbt```:
 
 ```scala
 libraryDependencies += Seq(
-  "org.zalando" %% "play-etcd-watcher" % "2.5.0"
+  "org.zalando" %% "play-etcd-watcher" % "2.5.2"
 )
 ```
 

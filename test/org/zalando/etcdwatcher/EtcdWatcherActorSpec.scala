@@ -170,5 +170,30 @@ class EtcdWatcherActorSpec extends Specification with Mockito {
       mainProbe.expectMsg(UpdateKeys(Map()))
       ok
     }
+
+    "return the full key if the key is a directory" in {
+      val mainProbe: TestProbe = TestProbe.apply()
+
+      val value = "ON"
+
+      val url = s"$EtcdUrl/v2/keys/$EtcdDir/?wait=true&recursive=true"
+      val ws = MockWS {
+        case ("GET", `url`) =>
+          Action {
+            Ok(
+              s"""
+                 |{"action":"get","node":{"key":"/$EtcdDir","dir":true,"nodes":[
+                 |{"key":"/$EtcdDir/subdir","dir":true,"nodes":[
+                 |{"key":"/$EtcdDir/subdir/$key1","value":"$value"}
+                 |]}]}}
+              """.stripMargin
+            )
+          }
+      }
+      val watcherRef = TestActorRef(new EtcdWatcherActor(ws, configMock))
+      watcherRef.tell(WatchKeys, mainProbe.ref)
+      mainProbe.expectMsg(1.seconds, UpdateKeys(Map(s"subdir/$key1" -> Some(value))))
+      ok
+    }
   }
 }

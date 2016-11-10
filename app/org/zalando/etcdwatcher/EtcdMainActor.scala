@@ -31,7 +31,7 @@ class EtcdMainActor @Inject() (
 
   override def receive = {
     case UpdateKeys(keys) =>
-      log.debug(s"Received updated keys: keys")
+      log.debug(s"Received updated keys: $keys")
       configListener.keysUpdated(keys)
       watcherActor ! WatchKeys
 
