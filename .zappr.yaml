@@ -5,7 +5,6 @@ approvals:
       from:
         orgs:
           - "zalando"
-          - "zalando-incubator"
 X-Zalando-Team: "payana"
 # type should be one of [code, doc, config, tools, secrets]
 X-Zalando-Type: code
