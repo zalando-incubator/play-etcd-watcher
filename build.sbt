@@ -2,12 +2,13 @@ organization := "org.zalando"
 
 name := "play-etcd-watcher"
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.12.2"
 
 libraryDependencies ++= Seq(
   ws,
+  guice,
   specs2 % Test,
-  "de.leanovate.play-mockws" %% "play-mockws" % "2.5.0" % Test,
+  "de.leanovate.play-mockws" %% "play-mockws" % "2.6.0" % Test,
   "com.typesafe.akka" %% "akka-testkit" % "2.4.12" % Test
 )
 
@@ -29,6 +30,8 @@ publishTo := {
 }
 
 publishArtifact in Test := false
+
+scapegoatVersion := "1.3.1"
 
 pomExtra := (
   <scm>
