@@ -19,8 +19,8 @@ class EtcdWatcherActorSpec extends Specification with Mockito {
   private val configMock = mock[Configuration]
   private val EtcdUrl: String = "http://etcd-url"
   private val EtcdDir: String = "local"
-  configMock.getString("etcd.directory") returns Some(EtcdDir)
-  configMock.getString("etcd.url") returns Some(EtcdUrl)
+  configMock.getOptional[String]("etcd.directory") returns Some(EtcdDir)
+  configMock.getOptional[String]("etcd.url") returns Some(EtcdUrl)
 
   val key1 = "feature1.enabled"
   val key2 = "feature2.enabled"

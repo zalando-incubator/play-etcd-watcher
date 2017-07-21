@@ -7,6 +7,7 @@ import play.api.Configuration
 import play.api.http.Status
 import play.api.libs.json._
 import play.api.libs.ws.{ WSClient, WSResponse }
+import play.mvc.Http.{ HeaderNames, MimeTypes }
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -18,11 +19,11 @@ object EtcdWatcherActor {
 
 class EtcdWatcherActor @Inject() (ws: WSClient, config: Configuration) extends Actor with ActorLogging {
 
-  private[this] val directory = config.getString("etcd.directory").getOrElse {
+  private[this] val directory = config.getOptional[String]("etcd.directory").getOrElse {
     throw new RuntimeException("Etcd directory not set")
   }
 
-  private[this] val serverUrl = config.getString("etcd.url").getOrElse {
+  private[this] val serverUrl = config.getOptional[String]("etcd.url").getOrElse {
     throw new RuntimeException("Etcd url not set")
   }
 
@@ -49,7 +50,7 @@ class EtcdWatcherActor @Inject() (ws: WSClient, config: Configuration) extends A
       log.info(s"Connecting to watch keys in directory $directory")
       val senderActor = sender()
       ws.url(s"$serverUrl/v2/keys/$directory/?wait=true&recursive=true")
-        .withHeaders("Accept" -> "application/json")
+        .withHttpHeaders(HeaderNames.ACCEPT -> MimeTypes.JSON)
         .withRequestTimeout(90.seconds)
         .get()
         .onComplete(onCompleteAction(_, senderActor))
@@ -58,7 +59,7 @@ class EtcdWatcherActor @Inject() (ws: WSClient, config: Configuration) extends A
       log.info("Retrieving keys from etcd")
       val senderActor = sender()
       ws.url(s"$serverUrl/v2/keys/$directory/?recursive=true")
-        .withHeaders("Accept" -> "application/json")
+        .withHttpHeaders(HeaderNames.ACCEPT -> MimeTypes.JSON)
         .get()
         .onComplete(onCompleteAction(_, senderActor))
 
