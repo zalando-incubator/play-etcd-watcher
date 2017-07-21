@@ -30,7 +30,7 @@ Add play-etcd-watcher dependency to your ```build.sbt```:
 
 ```scala
 libraryDependencies += Seq(
-  "org.zalando" %% "play-etcd-watcher" % "2.5.2"
+  "org.zalando" %% "play-etcd-watcher" % "2.6.0"
 )
 ```
 
@@ -72,8 +72,8 @@ The method will be called on startup and on each key change. The
 
 ## Versioning
 The version number follows the Play version but does not necessarily
-correspond to its minor version. In short, if the first release of the
-library was made for Play ```2.5.4```, the version would be ```2.5.0```.
+correspond to its minor version. As an example, if the first release of `play-etcd-watcher`
+was made for Play ```2.5.4```, the version would be ```2.5.0```.
 
 ## License
 
