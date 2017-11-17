@@ -30,7 +30,7 @@ Add play-etcd-watcher dependency to your ```build.sbt```:
 
 ```scala
 libraryDependencies += Seq(
-  "org.zalando" %% "play-etcd-watcher" % "2.5.2"
+  "org.zalando" %% "play-etcd-watcher" % "2.6.0"
 )
 ```
 
@@ -72,8 +72,42 @@ The method will be called on startup and on each key change. The
 
 ## Versioning
 The version number follows the Play version but does not necessarily
-correspond to its minor version. In short, if the first release of the
-library was made for Play ```2.5.4```, the version would be ```2.5.0```.
+correspond to its minor version. As an example, if the first release of `play-etcd-watcher`
+was made for Play ```2.5.4```, the version would be ```2.5.0```.
+
+## Developer notes
+### Releasing artifacts to nexus
+
+#### Prerequisites
+To deploy the artifact to nexus you need to have the following prerequisites:
+ - Sonatype account
+ - Rights for the corresponding repository
+ - Your pgp key to sign the artifact
+
+#### Deployment procedure
+
+See [this page](http://central.sonatype.org/pages/ossrh-guide.html) for more documentation.
+We use `sbt-sonatype` and `sbt-pgp` plugins to take care of deployment.
+To deploy, run the following commands:
+   git clean -df
+   sbt publishSigned
+   sbt sonatypeRelease
+
+IF the last step fails with an error like this:
+
+    [error] Multiple repositories are found:
+    [error] [orgzalando-1999] status:open, profile:org.zalando(6cc4d987a65f6) description: Implicitly created (auto staging).
+    [error] [orgzalando-2009] status:open, profile:org.zalando(6cc4d987a65f6) description: Implicitly created (auto staging).
+    [error] Specify one of the repository ids in the command line
+
+then you may need to specify the id explicitly:
+
+   sbt "sonatypeRelease orgzalando-2009"
+
+Most probably `profileId` is that the last in the list but check
+[staging repositories](https://oss.sonatype.org/#stagingRepositories) (you need to be logged in).
+
+Have fun!
 
 ## License
 
